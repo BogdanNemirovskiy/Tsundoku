@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Tsundoku design tokens.
+   Tailwind v4 reads @theme and generates utilities from these names, so
+   --color-ember becomes bg-ember / text-ember / border-ember, --text-title
+   becomes text-title, --spacing-gutter becomes px-gutter, and so on.
+   Change a value here and it changes everywhere.
+--------------------------------------------------------------------------- */
+@theme {
+  /* Surfaces — near-black, very slightly warm so posters sit on it cleanly. */
+  --color-void: #0a0a0b;
+  --color-surface: #121213;
+  --color-raised: #1a1a1c;
+  --color-line: #26262a;
+  --color-line-bright: #35353a;
+
+  /* Ink — warm off-white down to a dim meta grey. */
+  --color-paper: #ece7df;
+  --color-muted: #948d84;
+  --color-faint: #5f5a54;
+
+  /* The one accent. Used sparingly: active nav, score, watchlist-on. */
+  --color-ember: #e2643a;
+  --color-ember-dim: #b04b2a;
+
+  /* Type scale. */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1rem;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.15rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.6;
+  --text-lead: 1.0625rem;
+  --text-lead--line-height: 1.7;
+  --text-heading: 1.375rem;
+  --text-heading--line-height: 1.25;
+  --text-title: 2rem;
+  --text-title--line-height: 1.1;
+  --text-display: 3.25rem;
+  --text-display--line-height: 1.02;
+
+  /* Spacing additions on top of Tailwind's 4px scale. */
+  --spacing-gutter: 1.25rem;
+  --spacing-section: 4rem;
+  --spacing-rail: 15rem;
+
+  /* Corners stay sharp — 2px is the whole radius system. */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-void);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-void text-paper font-sans text-body;
+  }
+
+  /* BS: the accent is the focus ring everywhere; no per-component overrides. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ember;
+  }
+
+  ::selection {
+    background-color: var(--color-ember);
+    color: var(--color-void);
+  }
+}
+
+@layer components {
+  /* Page gutter + max width, shared by every route. */
+  .shell {
+    @apply mx-auto w-full max-w-[90rem] px-gutter sm:px-8 lg:px-12;
+  }
+
+  /* Small uppercase label used for meta rows and section eyebrows. */
+  .eyebrow {
+    @apply text-micro font-medium tracking-[0.14em] text-faint uppercase;
+  }
+}
