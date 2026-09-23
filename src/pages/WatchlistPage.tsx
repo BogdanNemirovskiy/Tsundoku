@@ -4,7 +4,7 @@ import AnimeGrid from '../components/AnimeGrid'
 import EmptyState from '../components/EmptyState'
 import { mockAnime } from '../mockData'
 import type { Anime } from '../types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function WatchlistPage() {
   // TODO: read the shared watchlist here — whatever SearchPage and DetailPage
@@ -17,6 +17,11 @@ export default function WatchlistPage() {
     const parsed = stored ? JSON.parse(stored) : []
     return Array.isArray(parsed) ? parsed : []
   });
+
+  useEffect(() => {
+    localStorage.setItem('watchlist', JSON.stringify(watchlist))
+  }, [watchlist])
+
   const onToggle = (anime: Anime) => {
     setWatchlist(prev => prev.filter(a => a.mal_id !== anime.mal_id));
   }
