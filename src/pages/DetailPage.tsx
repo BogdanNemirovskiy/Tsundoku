@@ -2,25 +2,69 @@
 import { Link } from 'react-router-dom'
 import AnimeDetail from '../components/AnimeDetail'
 import ErrorMessage from '../components/ErrorMessage'
-import { mockAnime } from '../mockData'
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+import type { Anime } from '../types'
 
 export default function DetailPage() {
   // TODO: read the route param.
-  //   const { id } = useParams<{ id: string }>()
+  const { id } = useParams<{ id: string }>()
 
   // TODO: fetch https://api.jikan.moe/v4/anime/<id> in a useEffect keyed on
   // `id`, and read the `data` object off the response. Handle the 404 Jikan
   // returns for unknown ids separately from a network failure.
-  //   const [anime, setAnime] = useState<Anime | null>(null)
-  //   const [isLoading, setIsLoading] = useState(true)
-  //   const [error, setError] = useState<string | null>(null)
-  const anime = mockAnime[0]
-  const isLoading = false
-  const error: string | null = null
+  const [anime, setAnime] = useState<Anime | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    console.log('[detail] fetch started for id:', id)
+    setIsLoading(true)
+    setError(null)
+
+    fetch(`https://api.jikan.moe/v4/anime/${id}`, { signal: controller.signal })
+      .then(r => {
+        console.log('[detail] response received, status:', r.status)
+        if (r.status === 404) {
+          throw new Error('NOT_FOUND')
+        }
+        if (!r.ok) {
+          throw new Error(`Request failed: ${r.status}`)
+        }
+        return r.json()
+      })
+      .then(d => {
+        console.log('[detail] raw response body:', d)
+        setAnime(d.data)
+        setIsLoading(false)
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') {
+          console.log('[detail] fetch aborted (superseded by a newer id)')
+          return
+        }
+        if (err.message === 'NOT_FOUND') {
+          console.error('[detail] anime not found for id:', id)
+          setError(`No anime found with id "${id}".`)
+        } else {
+          console.error('[detail] fetch failed:', err)
+          setError(err.message ?? 'Something went wrong')
+        }
+        setIsLoading(false)
+      })
+
+    return () => {
+      console.log('[detail] cleanup: aborting fetch for id:', id)
+      controller.abort()
+    }
+  }, [id])
+
+
 
   // TODO: same shared watchlist as SearchPage.
   const isInWatchlist = false
-  const onToggle = () => {}
+  const onToggle = () => { }
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -41,8 +85,8 @@ export default function DetailPage() {
             </div>
           </div>
         ) : error ? (
-          <ErrorMessage message={error} onRetry={() => {}} />
-        ) : (
+          <ErrorMessage message={error} onRetry={() => { }} />
+        ) : !anime ? null : (
           <AnimeDetail anime={anime} isInWatchlist={isInWatchlist} onToggle={onToggle} />
         )}
       </div>

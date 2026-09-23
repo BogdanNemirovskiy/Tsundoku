@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 // TODO: define and export the `Anime` interface here yourself. Nothing else
 // belongs in this file yet, and the app will not compile until you do.
 //
@@ -5,6 +7,25 @@
 //   https://api.jikan.moe/v4/anime?q=frieren&limit=5
 //   https://api.jikan.moe/v4/anime/52991
 //
+export interface Anime {
+    mal_id: number
+    title: string
+    title_english: string | null
+    images: { jpg: { image_url: string; large_image_url: string } }
+    year: number | null
+    type: string | null
+    score: number | null
+    scored_by: number | null
+    rank: number | null
+    episodes: number | null
+    status: string | null
+    duration: string | null
+    synopsis: string | null
+    genres: { mal_id: number; name: string }[]
+    studios: { mal_id: number; name: string }[]
+}
+
+
 // Fields the UI already reads (everything else on the response is optional
 // as far as the components are concerned):
 //

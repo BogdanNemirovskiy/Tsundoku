@@ -1,43 +1,121 @@
 // Props: none. Composition only — search bar, result count, then one of
 // skeleton / error / empty / grid. All four branches are laid out below so you
 // can see each one; swap the flags for real state.
+import { useEffect, useState } from 'react'
 import AnimeGrid from '../components/AnimeGrid'
 import EmptyState from '../components/EmptyState'
 import ErrorMessage from '../components/ErrorMessage'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import SearchBar from '../components/SearchBar'
 import { mockAnime } from '../mockData'
+import type { Anime } from '../types'
 
 export default function SearchPage() {
-  // TODO: your query state lives here.
-  //   const [query, setQuery] = useState('')
-  const query = ''
-
-  // TODO: debounce `query` (setTimeout in a useEffect, or a useDebounce hook
-  // you write), then fetch https://api.jikan.moe/v4/anime?q=<debounced>&limit=20
-  // in a useEffect keyed on the debounced value. Abort the previous request
-  // with an AbortController so out-of-order responses can't overwrite newer
-  // ones, and remember Jikan rate-limits to ~3 req/sec.
-  //   const [results, setResults] = useState<Anime[]>([])
-  //   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'done'>('idle')
-  //   const [error, setError] = useState<string | null>(null)
-  const results = mockAnime
-  const isLoading = false
-  const error: string | null = null
+  const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
+  const [results, setResults] = useState<Anime[]>([])
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'done'>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const isLoading = status === 'loading'
 
   // TODO: your watchlist lives above this page (Context, or lifted into App)
   // so SearchPage and WatchlistPage share it. Replace these two.
   const isInWatchlist = () => false
-  const onToggle = () => {}
+  const onToggle = () => { }
+
+  useEffect(() => {
+    console.log('[search] query changed:', query)
+    const timeout = setTimeout(() => {
+      console.log('[search] debounce elapsed, searching for:', query)
+      setDebouncedQuery(query)
+    }, 400)
+    return () => clearTimeout(timeout)
+  }, [query])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    console.log('[search] fetch started for:', debouncedQuery || '(trending)')
+    setStatus('loading')
+    setError(null)
+
+    fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        query: `query ($search: String, $sort: [MediaSort]) {
+  Page(page: 1, perPage: 20) {
+    media(search: $search, type: ANIME, sort: $sort) {
+          id idMal
+          title { romaji english }
+          coverImage { large extraLarge }
+          seasonYear format episodes status duration
+          averageScore popularity
+          description
+          genres
+          studios { nodes { id name } }
+        }
+      }
+    }`,
+        variables: {
+          search: debouncedQuery || undefined,
+          sort: debouncedQuery ? undefined : ['TRENDING_DESC'],
+        }
+      })
+    })
+      .then(r => {
+        console.log('[search] response received, status:', r.status)
+        return r.json()
+      })
+      .then(d => {
+        console.log('[search] raw response body:', d)
+
+        const mapped = d.data.Page.media.map((m: any) => ({
+          mal_id: m.idMal,
+          title: m.title.romaji,
+          title_english: m.title.english,
+          images: { jpg: { image_url: m.coverImage.large, large_image_url: m.coverImage.extraLarge } },
+          year: m.seasonYear,
+          type: m.format,
+          score: m.averageScore,
+          scored_by: m.popularity,
+          rank: null,
+          episodes: m.episodes,
+          status: m.status,
+          duration: m.duration ? `${m.duration} min` : null,
+          synopsis: m.description,
+          genres: m.genres.map((g: string) => ({ mal_id: 0, name: g })),
+          studios: m.studios.nodes.map((s: any) => ({ mal_id: s.id, name: s.name })),
+        }))
+        console.log('[search] mapped to Anime[]:', mapped)
+
+        setResults(mapped)
+        setStatus('done')
+        console.log('[search] done, result count:', mapped.length)
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') {
+          console.log('[search] fetch aborted (superseded by a newer search)')
+          return
+        }
+        console.error('[search] fetch failed:', err)
+        setError(err.message ?? 'Something went wrong')
+        setStatus('error')
+      })
+
+    return () => {
+      console.log('[search] cleanup: aborting fetch for:', debouncedQuery)
+      controller.abort()
+    }
+  }, [debouncedQuery, retryToken])
 
   return (
     <div className="shell py-10 sm:py-14">
       <div className="max-w-2xl">
         <SearchBar
           value={query}
-          onChange={() => {
-            // TODO: setQuery(value)
-          }}
+          onChange={(value) => setQuery(value)}
           autoFocus
         />
       </div>
@@ -47,7 +125,7 @@ export default function SearchPage() {
         {isLoading ? (
           <LoadingSkeleton count={10} />
         ) : error ? (
-          <ErrorMessage message={error} onRetry={() => {}} />
+          <ErrorMessage message={error} onRetry={() => setRetryToken((n) => n + 1)} />
         ) : results.length === 0 ? (
           <EmptyState
             title={query ? 'No matches' : 'Start typing'}
