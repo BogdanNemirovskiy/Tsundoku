@@ -3,14 +3,23 @@ import { Link } from 'react-router-dom'
 import AnimeGrid from '../components/AnimeGrid'
 import EmptyState from '../components/EmptyState'
 import { mockAnime } from '../mockData'
+import type { Anime } from '../types'
+import { useState } from 'react'
 
 export default function WatchlistPage() {
   // TODO: read the shared watchlist here — whatever SearchPage and DetailPage
   // write to (Context, a store, or state lifted into App). Persistence to
   // localStorage belongs in that shared layer, not in this page.
-  //   const { watchlist, toggle } = useWatchlist()
-  const watchlist = mockAnime.slice(0, 4)
-  const onToggle = () => {}
+  // const { watchlist, toggle } = useWatchlist()
+
+  const [watchlist, setWatchlist] = useState<Anime[]>(() => {
+    const stored = localStorage.getItem('watchlist');
+    const parsed = stored ? JSON.parse(stored) : []
+    return Array.isArray(parsed) ? parsed : []
+  });
+  const onToggle = (anime: Anime) => {
+    setWatchlist(prev => prev.filter(a => a.mal_id !== anime.mal_id));
+  }
 
   return (
     <div className="shell py-10 sm:py-14">

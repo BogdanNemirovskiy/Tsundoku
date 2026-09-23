@@ -7,8 +7,13 @@ import { useParams } from 'react-router-dom'
 import type { Anime } from '../types'
 
 export default function DetailPage() {
-  // TODO: read the route param.
+  // TODO: read the route param. And LocalStorage
   const { id } = useParams<{ id: string }>()
+  const [watchlist, setWatchlist] = useState<Anime[]>(() => {
+    const stored = localStorage.getItem('watchlist')
+    const parsed = stored ? JSON.parse(stored) : []
+    return Array.isArray(parsed) ? parsed : []
+  })
 
   // TODO: fetch https://api.jikan.moe/v4/anime/<id> in a useEffect keyed on
   // `id`, and read the `data` object off the response. Handle the 404 Jikan
@@ -16,6 +21,8 @@ export default function DetailPage() {
   const [anime, setAnime] = useState<Anime | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+
 
   useEffect(() => {
     const controller = new AbortController()
@@ -60,11 +67,21 @@ export default function DetailPage() {
     }
   }, [id])
 
-
+  useEffect(() => {
+    localStorage.setItem('watchlist', JSON.stringify(watchlist))
+  }, [watchlist])
 
   // TODO: same shared watchlist as SearchPage.
-  const isInWatchlist = false
-  const onToggle = () => { }
+  const isInWatchlist = anime ? watchlist.some((a) => a.mal_id === anime.mal_id) : false
+  const onToggle = (anime: Anime) => {
+    setWatchlist((prev) =>
+      prev.some((a) => a.mal_id === anime.mal_id)
+        ? prev.filter((a) => a.mal_id !== anime.mal_id)
+        : [...prev, anime]
+    )
+    console.log(watchlist);
+
+  }
 
   return (
     <div className="shell py-10 sm:py-14">

@@ -21,8 +21,24 @@ export default function SearchPage() {
 
   // TODO: your watchlist lives above this page (Context, or lifted into App)
   // so SearchPage and WatchlistPage share it. Replace these two.
-  const isInWatchlist = () => false
-  const onToggle = () => { }
+  const [watchlist, setWatchlist] = useState<Anime[]>(() => {
+    const stored = localStorage.getItem('watchlist')
+    const parsed = stored ? JSON.parse(stored) : []
+    return Array.isArray(parsed) ? parsed : []
+  })
+
+  useEffect(() => {
+    localStorage.setItem('watchlist', JSON.stringify(watchlist))
+  }, [watchlist])
+
+  const isInWatchlist = (anime: Anime) => watchlist.some((a) => a.mal_id === anime.mal_id)
+  const onToggle = (anime: Anime) => {
+    setWatchlist((prev) =>
+      prev.some((a) => a.mal_id === anime.mal_id)
+        ? prev.filter((a) => a.mal_id !== anime.mal_id)
+        : [...prev, anime]
+    )
+  }
 
   useEffect(() => {
     console.log('[search] query changed:', query)
